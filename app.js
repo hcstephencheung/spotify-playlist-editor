@@ -14,8 +14,8 @@ var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 require('dotenv').load();
 
-var client_id = 'fcf35e2d6cd349aabb936c112baa6d32'; // Your client id
-var client_secret = '964d3468bc554c51aeea681eeff86fff'; // Your secret
+var client_id = ''; // Your client id
+var client_secret = ''; // Your secret
 var redirect_uri = 'http://localhost:8888/callback/'; // Your redirect uri
 
 /**
