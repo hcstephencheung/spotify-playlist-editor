@@ -34,6 +34,7 @@ var generateRandomString = function(length) {
 };
 
 var stateKey = 'spotify_auth_state';
+var acKey = 'spotify-ac-key';
 
 var app = express();
 
@@ -106,6 +107,7 @@ app.get('/callback', function(req, res) {
           // console.log(body);
         });
 
+        res.cookie(acKey, access_token);
         // we can also pass the token to the browser to make requests from there
         res.redirect('/#' +
           querystring.stringify({
@@ -147,10 +149,10 @@ app.get('/refresh_token', function(req, res) {
 });
 
 app.get('/playlists', function(req, res) {
-
-  // your application requests refresh and access tokens
-  // after checking the state parameter
-  var access_token = process.env.ACCESS_TOKEN || '';
+    // your application requests refresh and access tokens
+    // after checking the state parameter
+    var access_token_cookie = req.cookies[acKey];
+    var access_token = access_token_cookie || '';
     let data = {};
 
     var options = {
@@ -161,19 +163,23 @@ app.get('/playlists', function(req, res) {
 
     // use the access token to access the Spotify Web API
     request.get(options, function(error, response, body) {
-      let data = {};
-      if (body) {
-        data = body.items.map((playlistItem) => {
-          // pick out attributes I want
-          const {
-            name,
-            id,
-            href
-          } = playlistItem;
-          return { name, id, href };
-        })
+      if (body && body.error && body.error.status && body.error.status === 401) {
+        res.redirect('/');
+      } else {
+        let data = {};
+        if (body) {
+          data = body.items.map((playlistItem) => {
+            // pick out attributes I want
+            const {
+              name,
+              id,
+              href
+            } = playlistItem;
+            return { name, id, href };
+          })
+        }
+        res.send(data);
       }
-      res.send(data);
     });
 });
 
