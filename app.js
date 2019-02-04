@@ -17,6 +17,7 @@ require("dotenv").load();
 var client_id = "" || process.env.CLIENT_ID; // Your client id
 var client_secret = "" || process.env.CLIENT_SECRET; // Your secret
 var redirect_uri = "http://localhost:8888/callback/"; // Your redirect uri
+var allowedOrigins = "http://localhost:1234";
 
 /**
  * Generates a random string containing numbers and letters
@@ -38,6 +39,7 @@ var stateKey = "spotify_auth_state";
 var acKey = "spotify-ac-key";
 
 var app = express();
+app.use(cors({ origin: "http://localhost:1234" }));
 
 app
   .use(express.static(__dirname + "/public"))
@@ -167,8 +169,6 @@ app.get("/playlists", function(req, res) {
   var access_token = access_token_cookie || "";
   let data = {};
 
-  console.log("==== access token is ====", req.cookies);
-
   var options = {
     url: "https://api.spotify.com/v1/me/playlists",
     headers: { Authorization: "Bearer " + access_token },
@@ -182,13 +182,14 @@ app.get("/playlists", function(req, res) {
     } else {
       let data = {};
       if (body) {
-        console.log(body);
         data = body.items.map(playlistItem => {
           // pick out attributes I want
           const { name, id, href } = playlistItem;
           return { name, id, href };
         });
       }
+      res.setHeader("Access-Control-Allow-Origin", allowedOrigins);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
       res.send(data);
     }
   });
