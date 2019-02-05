@@ -132,8 +132,7 @@ app.get("/appCallback", function(req, res) {
         // we can also pass the token to the browser to make requests from there
         res.status(200).send({ ac: access_token, key: acKey });
       } else {
-        console.log(error);
-        res.sendStatus(500);
+        res.status(400).send(error);
       }
     });
   }
