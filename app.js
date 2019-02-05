@@ -17,6 +17,7 @@ require("dotenv").load();
 var client_id = "" || process.env.CLIENT_ID; // Your client id
 var client_secret = "" || process.env.CLIENT_SECRET; // Your secret
 var redirect_uri = "http://localhost:8888/callback/"; // Your redirect uri
+var appRedirect_uri = "http://localhost:1234/token"; // Your redirect uri
 var allowedOrigins = "http://localhost:1234";
 
 /**
@@ -62,6 +63,80 @@ app.get("/login", function(req, res) {
         state: state
       })
   );
+});
+
+app.get("/appLogin", function(req, res) {
+  var state = generateRandomString(16);
+  res.cookie(stateKey, state);
+
+  // your application requests authorization
+  var scope = "user-read-private user-read-email playlist-read-private";
+  var spotifyLoginUrl = "https://accounts.spotify.com/authorize?" +
+    querystring.stringify({
+      response_type: "code",
+      client_id: client_id,
+      scope: scope,
+      redirect_uri: appRedirect_uri,
+      state: state
+  });
+
+  res.status(200).send({ stateKey: stateKey, stateValue: state, loginUrl: spotifyLoginUrl });
+});
+
+app.get("/appCallback", function(req, res) {
+  // your application requests refresh and access tokens
+  // after checking the state parameter
+
+  var code = req.query.code || null;
+  var state = req.query.state || null;
+  var storedState = req.cookies ? req.cookies[stateKey] : null;
+
+  res.setHeader("Access-Control-Allow-Origin", allowedOrigins);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (state === null || state !== storedState) {
+    res.status(400).send({
+        error: storedState
+      });
+  } else {
+    res.clearCookie(stateKey);
+    var authOptions = {
+      url: "https://accounts.spotify.com/api/token",
+      form: {
+        code: code,
+        redirect_uri: appRedirect_uri,
+        grant_type: "authorization_code"
+      },
+      headers: {
+        Authorization:
+          "Basic " +
+          new Buffer(client_id + ":" + client_secret).toString("base64")
+      },
+      json: true
+    };
+
+    request.post(authOptions, function(error, response, body) {
+      if (!error && response.statusCode === 200) {
+        var access_token = body.access_token,
+          refresh_token = body.refresh_token;
+
+        var options = {
+          url: "https://api.spotify.com/v1/me",
+          headers: { Authorization: "Bearer " + access_token },
+          json: true
+        };
+
+        console.log("App Access Token is: ", access_token);
+
+        res.cookie(acKey, access_token);
+        // we can also pass the token to the browser to make requests from there
+        res.status(200).send({ ac: access_token, key: acKey });
+      } else {
+        console.log(error);
+        res.sendStatus(500);
+      }
+    });
+  }
 });
 
 app.get("/callback", function(req, res) {
@@ -169,6 +244,8 @@ app.get("/playlists", function(req, res) {
   var access_token = access_token_cookie || "";
   let data = {};
 
+  console.log("=== playlists access token ===", access_token_cookie);
+
   var options = {
     url: "https://api.spotify.com/v1/me/playlists",
     headers: { Authorization: "Bearer " + access_token },
@@ -182,6 +259,7 @@ app.get("/playlists", function(req, res) {
     } else {
       let data = {};
       if (body) {
+        console.log(body);
         data = body.items.map(playlistItem => {
           // pick out attributes I want
           const { name, id, href } = playlistItem;
