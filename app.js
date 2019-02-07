@@ -254,45 +254,13 @@ app.get("/playlists", function(req, res) {
     json: true
   };
 
-  // use the access token to access the Spotify Web API
-  request.get(options, function(error, response, body) {
-    if (body && body.error && body.error.status && body.error.status === 401) {
-      res.redirect("/");
-    } else {
-      let data = {};
-      if (body) {
-        data = body.items.map(playlistItem => {
-          // pick out attributes I want
-          const { name, id, href } = playlistItem;
-          return { name, id, href };
-        });
-      }
-      res.setHeader("Access-Control-Allow-Origin", allowedOrigins);
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.send(data);
-    }
-  });
-});
-
-app.get("/playlists", function(req, res) {
-  // your application requests refresh and access tokens
-  // after checking the state parameter
-  var access_token_cookie = req.cookies[acKey];
-  var access_token = access_token_cookie || "";
-
-  var options = {
-    url: "https://api.spotify.com/v1/me/playlists",
-    headers: { Authorization: "Bearer " + access_token },
-    json: true
-  };
-
   res.setHeader("Access-Control-Allow-Origin", allowedOrigins);
   res.setHeader("Access-Control-Allow-Credentials", "true");
 
   // use the access token to access the Spotify Web API
   request.get(options, function(error, response, body) {
     if (body && body.error && body.error.status && body.error.status === 401) {
-      res.redirect("/");
+      res.status(401).end();
     } else {
       let data = {};
       if (body) {
@@ -328,7 +296,7 @@ app.get("/playlist/:id", function(req, res) {
   // use the access token to access the Spotify Web API
   request.get(options, function(error, response, body) {
     if (body && body.error && body.error.status && body.error.status === 401) {
-      res.redirect("/");
+      res.status(401).end();
     } else {
       let data = body.items;
       console.log("=== playlist ===", body);
